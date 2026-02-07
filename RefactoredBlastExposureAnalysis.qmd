@@ -1,0 +1,101 @@
+---
+title: "Refactored Blast Exposure"
+author: "Albert Zeng"
+format: html
+editor: visual
+---
+
+## 
+
+```{r}
+source("scripts/Functions.r")
+library(caret)
+library(optmatch)
+library(readxl)
+library(dplyr)
+```
+
+```{r}
+blast_data = read_xlsx("FinalDataRepository/MatchData.xlsx")
+blast_data$surveyed = ifelse(blast_data$CaseControlSurvey == "Survey",1,0)
+survey_data = subset(blast_data, CaseControlSurvey == "Survey")
+TBI_data = subset(blast_data, CaseControlSurvey == "Case")
+No_TBI_data = subset(blast_data, CaseControlSurvey == "Control")
+```
+
+```{r}
+mean(survey_data$Age)
+sd(survey_data$Age)
+mean(TBI_data$Age)
+sd(TBI_data$Age)
+mean(No_TBI_data$Age)
+sd(No_TBI_data$Age)
+```
+
+```{r}
+table(survey_data$Race)
+table(TBI_data$Race)
+table(No_TBI_data$Race)
+```
+
+```{r}
+table(survey_data$Branch)
+table(TBI_data$Branch)
+table(No_TBI_data$Branch)
+```
+
+```{r}
+table(survey_data$MaritalStatus)
+table(TBI_data$MaritalStatus)
+table(No_TBI_data$MaritalStatus)
+```
+
+```{r}
+mean(survey_data$MilitaryYears)
+sd(survey_data$MilitaryYears)
+mean(TBI_data$MilitaryYears, na.rm=TRUE)
+sd(TBI_data$MilitaryYears, na.rm=TRUE)
+mean(No_TBI_data$MilitaryYears, na.rm=TRUE)
+sd(No_TBI_data$MilitaryYears, na.rm=TRUE)
+```
+
+```{r}
+datatempTBI <- rbind(survey_data, TBI_data)
+datatempNoTBI <- rbind(survey_data, No_TBI_data)
+covariates1 <- c("Age", "Race", "Gender", "MaritalStatus", "Branch", "MilitaryYears")
+covariates2 <- c("Age", "Race", "Gender", "MaritalStatus", "Branch", "MilitaryYears", "PCL5_TOTAL", "AUDITC_TOTAL")
+
+# Standard covariate check
+resultsTBI <- matchanalysis(datatempTBI, treatment = "surveyed", covariates = covariates1)
+resultsNoTBI <- matchanalysis(datatempNoTBI, treatment = "surveyed", covariates = covariates1)
+
+# PCL5 and AUDITC as covariates
+resultsTBIExtra <- matchanalysis(datatempTBI, treatment = "surveyed", covariates = covariates2)
+resultsNoTBIExtra <- matchanalysis(datatempNoTBI, treatment = "surveyed", covariates = covariates2)
+
+```
+
+```{r}
+graphloveplots(resultsTBI$balance$stand.diff.before, resultsTBI$balance$stand.diff.after)
+graphloveplots(resultsNoTBI$balance$stand.diff.before, resultsNoTBI$balance$stand.diff.after)
+graphloveplots(resultsTBIExtra$balance$stand.diff.before, resultsTBIExtra$balance$stand.diff.after)
+graphloveplots(resultsNoTBIExtra$balance$stand.diff.before, resultsNoTBIExtra$balance$stand.diff.after)
+```
+
+```{r}
+#TBI Control
+results_TBI_PHQ9 <- fitmatchedregression("PHQ9_TOTAL", resultsTBI$propscore.model, resultsTBI$matchvec, resultsTBI$data)
+results_TBI_PCL5 <- fitmatchedregression("PCL5_TOTAL", resultsTBI$propscore.model,resultsTBI$matchvec, resultsTBI$data)
+results_TBI_AUDITC <- fitmatchedregression("AUDITC_TOTAL", resultsTBI$propscore.model,resultsTBI$matchvec, resultsTBI$data)
+
+#No TBI Control
+results_No_TBI_PHQ9 <- fitmatchedregression("PHQ9_TOTAL", resultsNoTBI$propscore.model, resultsNoTBI$matchvec, resultsNoTBI$data)
+results_No_TBI_PCL5 <- fitmatchedregression("PCL5_TOTAL", resultsNoTBI$propscore.model,resultsNoTBI$matchvec, resultsNoTBI$data)
+results_No_TBI_AUDITC <- fitmatchedregression("AUDITC_TOTAL", resultsNoTBI$propscore.model,resultsNoTBI$matchvec, resultsNoTBI$data)
+
+# Extra Covariates TBI Control
+results_TBI_Extra_Covariates <- fitmatchedregression("PHQ9_TOTAL", resultsTBIExtra$propscore.model, resultsTBIExtra$matchvec, resultsTBIExtra$data)
+
+# Extra Covariates No TBI Control
+results_No_TBI_Extra_Covariates <- fitmatchedregression("PHQ9_TOTAL", resultsNoTBIExtra$propscore.model, resultsNoTBIExtra$matchvec, resultsNoTBIExtra$data)
+```
