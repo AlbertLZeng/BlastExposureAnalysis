@@ -118,6 +118,11 @@ performmatch <- function(data, Xmatmahal, treatment, caliper.sd = 0.5, controls.
   distmat <- smahal(data[[treatment]], Xmatmahal)
   distmat <- addcaliper(distmat, data[[treatment]], data$logit.ps, calipersd = caliper.sd)
   
+  ## asymmetric penalty for Race, take out for other types of matching
+  var = rank(data$Race)
+  dif =outer(var[data$surveyed==1], var[data$surveyed==0],"-")/sd(var)
+  distmat = distmat +(dif^2)*(dif<0)
+  
   rownames(distmat) <- rownames(data)[data[[treatment]]==1]
   colnames(distmat) <- rownames(data)[data[[treatment]]==0]
   

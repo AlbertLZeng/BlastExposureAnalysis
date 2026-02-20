@@ -60,18 +60,23 @@ sd(No_TBI_data$MilitaryYears, na.rm=TRUE)
 ```
 
 ```{r}
+caliper.sd = 0.6
+no.controls.per.match = 1
+```
+
+```{r}
 datatempTBI <- rbind(survey_data, TBI_data)
 datatempNoTBI <- rbind(survey_data, No_TBI_data)
 covariates1 <- c("Age", "Race", "Gender", "MaritalStatus", "Branch", "MilitaryYears")
 covariates2 <- c("Age", "Race", "Gender", "MaritalStatus", "Branch", "MilitaryYears", "PCL5_TOTAL", "AUDITC_TOTAL")
 
 # Standard covariate check
-resultsTBI <- matchanalysis(datatempTBI, treatment = "surveyed", covariates = covariates1)
-resultsNoTBI <- matchanalysis(datatempNoTBI, treatment = "surveyed", covariates = covariates1)
+resultsTBI <- matchanalysis(datatempTBI, treatment = "surveyed", covariates = covariates1, caliper.sd = caliper.sd)
+resultsNoTBI <- matchanalysis(datatempNoTBI, treatment = "surveyed", covariates = covariates1, caliper.sd = caliper.sd)
 
 # PCL5 and AUDITC as covariates
-resultsTBIExtra <- matchanalysis(datatempTBI, treatment = "surveyed", covariates = covariates2)
-resultsNoTBIExtra <- matchanalysis(datatempNoTBI, treatment = "surveyed", covariates = covariates2)
+resultsTBIExtra <- matchanalysis(datatempTBI, treatment = "surveyed", covariates = covariates2, caliper.sd = 0.5)
+resultsNoTBIExtra <- matchanalysis(datatempNoTBI, treatment = "surveyed", covariates = covariates2, caliper.sd = 0.5)
 
 ```
 
