@@ -39,11 +39,11 @@ addcaliper = function(dmat,z,logitp,calipersd=.5,penalty=1000) {
   dmat
 }
 
-fitmatchedregression <- function(outcome, propscore.model, matchvec, data) {
-  reg_formula <- update(propscore.model$formula, as.formula(paste0(outcome, " ~ surveyed + matchvec + .")))
+fitmatchedregression <- function(outcome, propscore.model, matchvec, data, treatment = "surveyed") 
+  {
   
+  reg_formula <- update(propscore.model$formula, as.formula(paste0(outcome, " ~ + ", treatment, " + matchvec + .")))
   matched_reg_model <- lm(reg_formula, data=data)
-  
   return(matched_reg_model)
 }
 
@@ -112,17 +112,18 @@ preparematch <- function(data, propscore.model, treatment) {
     ))
 }
 
-performmatch <- function(data, Xmatmahal, treatment, caliper.sd = 0.5, controls.per.match = 1) {
+performmatch <- function(data, Xmatmahal, treatment, caliper.sd = 0.5, controls.per.match = 1, add.penalty = FALSE) {
   Xmatmahal <- Xmatmahal[, colSums(Xmatmahal) > 0]
   
   distmat <- smahal(data[[treatment]], Xmatmahal)
   distmat <- addcaliper(distmat, data[[treatment]], data$logit.ps, calipersd = caliper.sd)
   
+  if(add.penalty) {
   ## asymmetric penalty for Race, take out for other types of matching
   var = rank(data$Race)
-  dif =outer(var[data$surveyed==1], var[data$surveyed==0],"-")/sd(var)
+  dif =outer(var[data[[treatment]]==1], var[data[[treatment]]==0],"-")/sd(var)
   distmat = distmat +(dif^2)*(dif<0)
-  
+  }
   rownames(distmat) <- rownames(data)[data[[treatment]]==1]
   colnames(distmat) <- rownames(data)[data[[treatment]]==0]
   
@@ -133,8 +134,13 @@ performmatch <- function(data, Xmatmahal, treatment, caliper.sd = 0.5, controls.
   matchedset.index <- substr(matchvec, start = 3, stop = 10)
   matchedset.index.numeric <- as.numeric(matchedset.index)
   
-  for(i in 1:length(treated.index)) {
-    matched.set.temp <- which(matchedset.index.numeric == i)
+  valid.matchsets <- sort(unique(matchedset.index.numeric[!is.na(matchedset.index.numeric)]))
+  
+  treated.index <- rep(0, length(valid.matchsets))
+  control.index.mat <- matrix(rep(0, controls.per.match * length(valid.matchsets)), ncol = controls.per.match)
+  
+  for(i in seq_along(valid.matchsets)) {
+    matched.set.temp <- which(matchedset.index.numeric == valid.matchsets[i])
     treated.temp.index <- which(data[[treatment]][matched.set.temp] == 1)
     treated.index[i] <- matched.set.temp[treated.temp.index]
     control.index.mat[i,] <- matched.set.temp[-treated.temp.index]
@@ -201,7 +207,7 @@ graphloveplots <- function(stand.diff.before, stand.diff.after) {
     labs(shpae = "Type", x = "Absolute Standardized Difference", y = "Covariates")
 }
 
-  matchanalysis <- function(data, treatment, covariates, controls.per.match = 1, caliper.sd = 0.5) {
+  matchanalysis <- function(data, treatment, covariates, controls.per.match = 1, caliper.sd = 0.5, add.penalty=FALSE) {
   
   propscore.model <- fitpropensitymodel(data, treatment, covariates)
   prepared.data <- preparematch(data, propscore.model, treatment)
@@ -211,7 +217,8 @@ graphloveplots <- function(stand.diff.before, stand.diff.after) {
     prepared.data$Xmatmahal,
     treatment,
     caliper.sd,
-    controls.per.match
+    controls.per.match,
+    add.penalty
   )
   
   balance.stats <- calculatebalance(

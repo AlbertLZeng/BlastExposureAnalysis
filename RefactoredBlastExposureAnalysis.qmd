@@ -61,6 +61,7 @@ sd(No_TBI_data$MilitaryYears, na.rm=TRUE)
 
 ```{r}
 caliper.sd = 0.6
+caliper.sd.extra.covariates = 0.5
 no.controls.per.match = 1
 ```
 
@@ -71,12 +72,12 @@ covariates1 <- c("Age", "Race", "Gender", "MaritalStatus", "Branch", "MilitaryYe
 covariates2 <- c("Age", "Race", "Gender", "MaritalStatus", "Branch", "MilitaryYears", "PCL5_TOTAL", "AUDITC_TOTAL")
 
 # Standard covariate check
-resultsTBI <- matchanalysis(datatempTBI, treatment = "surveyed", covariates = covariates1, caliper.sd = caliper.sd)
-resultsNoTBI <- matchanalysis(datatempNoTBI, treatment = "surveyed", covariates = covariates1, caliper.sd = caliper.sd)
+resultsTBI <- matchanalysis(datatempTBI, treatment = "surveyed", covariates = covariates1, caliper.sd = caliper.sd, add.penalty = TRUE)
+resultsNoTBI <- matchanalysis(datatempNoTBI, treatment = "surveyed", covariates = covariates1, caliper.sd = caliper.sd, add.penalty = TRUE)
 
 # PCL5 and AUDITC as covariates
-resultsTBIExtra <- matchanalysis(datatempTBI, treatment = "surveyed", covariates = covariates2, caliper.sd = 0.5)
-resultsNoTBIExtra <- matchanalysis(datatempNoTBI, treatment = "surveyed", covariates = covariates2, caliper.sd = 0.5)
+resultsTBIExtra <- matchanalysis(datatempTBI, treatment = "surveyed", covariates = covariates2, caliper.sd = caliper.sd.extra.covariates, add.penalty = FALSE)
+resultsNoTBIExtra <- matchanalysis(datatempNoTBI, treatment = "surveyed", covariates = covariates2, caliper.sd = caliper.sd.extra.covariates, add.penalty = FALSE)
 
 ```
 
@@ -103,4 +104,19 @@ results_TBI_Extra_Covariates <- fitmatchedregression("PHQ9_TOTAL", resultsTBIExt
 
 # Extra Covariates No TBI Control
 results_No_TBI_Extra_Covariates <- fitmatchedregression("PHQ9_TOTAL", resultsNoTBIExtra$propscore.model, resultsNoTBIExtra$matchvec, resultsNoTBIExtra$data)
+```
+
+```{r}
+datatempNoSurvey <- rbind(No_TBI_data, TBI_data)
+datatempNoSurvey$treatment <- ifelse(datatempNoSurvey$CaseControlSurvey == "Case", 1, 0)
+
+resultsNoSurvey <- matchanalysis(data = datatempNoSurvey, treatment = "treatment", covariates = covariates1, controls.per.match = 1, caliper.sd = caliper.sd)
+
+graphloveplots(resultsNoSurvey$balance$stand.diff.before, resultsNoSurvey$balance$stand.diff.after)
+
+results_No_Survey_PHQ9 <- fitmatchedregression("PHQ9_TOTAL", resultsNoSurvey$propscore.model, resultsNoSurvey$matchvec, resultsNoSurvey$data, treatment = "treatment")
+
+results_No_Survey_PCL5 <- fitmatchedregression("PCL5_TOTAL", resultsNoSurvey$propscore.model, resultsNoSurvey$matchvec, resultsNoSurvey$data, treatment = "treatment")
+
+results_No_Survey_AUDITC <- fitmatchedregression("AUDITC_TOTAL", resultsNoSurvey$propscore.model, resultsNoSurvey$matchvec, resultsNoSurvey$data, treatment = "treatment")
 ```
